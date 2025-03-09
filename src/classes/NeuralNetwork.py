@@ -1,4 +1,4 @@
-import Layer
+from Layer import Layer
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle 
@@ -125,8 +125,8 @@ class NeuralNetwork:
                 print(f"Layer index {idx} is out of range.")
                 continue
             plt.figure()
-            plt.hist(self.layers[idx].W.flatten(), bins=20, color="red", label='Weights')
-            plt.hist(self.layers[idx].b.flatten(), bins=20, color="orange", label='Biases')
+            plt.hist(self.layers[idx].W.flatten(), bins=20, color="blue", label='Weights')
+            plt.hist(self.layers[idx].b.flatten(), bins=20, color="yellow", label='Biases')
             plt.legend()
             plt.title(f"Weight and Bias Distribution for Layer {idx+1}")
             plt.xlabel("Weight value")
@@ -142,8 +142,8 @@ class NeuralNetwork:
                 print(f"No gradient available for Layer {idx+1}. Run a backward pass first.")
                 continue
             plt.figure()
-            plt.hist(self.layers[idx].dW.flatten(), bins=20,color="red", label='dW')
-            plt.hist(self.layers[idx].db.flatten(), bins=20,color="orange", label='db')
+            plt.hist(self.layers[idx].dW.flatten(), bins=20,color="blue", label='dW')
+            plt.hist(self.layers[idx].db.flatten(), bins=20,color="yellow", label='db')
             plt.legend()
             plt.title(f"Gradient Distribution (dW) for Layer {idx+1}")
             plt.xlabel("Gradient value")
