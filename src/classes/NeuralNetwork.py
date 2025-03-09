@@ -1,5 +1,6 @@
 import Layer
 import numpy as np
+import pickle 
 
 # Loss Functions & Derivatives
 
@@ -83,3 +84,15 @@ class NeuralNetwork:
 
     def predict(self, X):
         return self.forward(X)
+    
+    def save(self, filename):
+        with open(filename, 'wb') as f:
+            pickle.dump(self, f)
+        print(f"Model saved to {filename}.")
+
+    @staticmethod
+    def load(filename):
+        with open(filename, 'rb') as f:
+            model = pickle.load(f)
+        print(f"Model loaded from {filename}.")
+        return model
