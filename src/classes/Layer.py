@@ -82,7 +82,9 @@ class Layer:
         self.activation, self.activation_deriv = activation_functions[self.activation_name]
         self.W = initialize_weight((input_size, output_size), weight_init, weight_init_params)
         self.b = initialize_weight((1, output_size), weight_init, weight_init_params)
-    
+        self.dW = None
+        self.db = None
+
     def forward(self, X):
         self.X = X 
         self.z = np.dot(X, self.W) + self.b
@@ -95,11 +97,11 @@ class Layer:
         else:
             delta = delta * self.activation_deriv(self.z, self.a)
         
-        dW = np.dot(self.X.T, delta)
-        db = np.sum(delta, axis=0, keepdims=True)
+        self.dW = np.dot(self.X.T, delta)
+        self.db = np.sum(delta, axis=0, keepdims=True)
 
         delta_prev = np.dot(delta, self.W.T)
 
-        self.W -= learning_rate * dW
-        self.b -= learning_rate * db
+        self.W -= learning_rate * self.dW
+        self.b -= learning_rate * self.db
         return delta_prev

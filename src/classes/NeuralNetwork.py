@@ -1,5 +1,6 @@
 import Layer
 import numpy as np
+import matplotlib.pyplot as plt
 import pickle 
 
 # Loss Functions & Derivatives
@@ -65,23 +66,30 @@ class NeuralNetwork:
         for layer in reversed(self.layers):
             delta = layer.backward(delta, learning_rate)
 
-    def train(self, X, y, batch_size=32, learning_rate=0.01, max_epoch=100, verbose=1):
-        n_samples = X.shape[0]
+    def train(self, X_train, y_train, X_val, y_val, batch_size=32, learning_rate=0.01, max_epoch=100, verbose=1):
+        n_samples = X_train.shape[0]
+        history = {"train_loss": [], "val_loss": []}
         for epoch in range(max_epoch):
             indices = np.arange(n_samples)
             np.random.shuffle(indices)
-            X_shuffled = X[indices]
-            y_shuffled = y[indices]
+            X_shuffled = X_train[indices]
+            y_shuffled = y_train[indices]
             for start in range(0, n_samples, batch_size):
                 end = start + batch_size
                 X_batch = X_shuffled[start:end]
                 y_batch = y_shuffled[start:end]
                 self.backward(X_batch, y_batch, learning_rate)
-            if verbose:
-                y_pred = self.forward(X)
-                loss_value = self.loss(y, y_pred)
-                print(f"Epoch {epoch+1}/{max_epoch}, Loss: {loss_value}")
 
+            if verbose:
+                y_pred = self.forward(X_train)
+                y_pred_val = self.forward(X_val)
+                train_loss = self.loss(y_train, y_pred)
+                val_loss = self.loss(y_val, y_pred_val)
+                history["train_loss"].append(train_loss)
+                history["val_loss"].append(val_loss)
+                print(f"Epoch {epoch+1}/{max_epoch}, Train Loss: {train_loss}, Val Loss: {val_loss}")
+        return history
+    
     def predict(self, X):
         return self.forward(X)
     
@@ -96,3 +104,48 @@ class NeuralNetwork:
             model = pickle.load(f)
         print(f"Model loaded from {filename}.")
         return model
+    
+    def display_model(self):
+        print("Model Structure:")
+        for idx, layer in enumerate(self.layers):
+            print(f"\nLayer {idx+1}:")
+            print(f"  Input size: {layer.input_size}, Output size: {layer.output_size}")
+            print(f"  Activation: {layer.activation_name}")
+            print("  Weights:\n", layer.W)
+            print("  Biases:\n", layer.b)
+            if layer.dW is not None:
+                print("  Weight Gradients (dW):\n", layer.dW)
+                print("  Bias Gradients (db):\n", layer.db)
+            else:
+                print("  Gradients not computed yet.")
+
+    def plot_weight_distribution(self, layers_to_plot):
+        for idx in layers_to_plot:
+            if idx < 0 or idx >= len(self.layers):
+                print(f"Layer index {idx} is out of range.")
+                continue
+            plt.figure()
+            plt.hist(self.layers[idx].W.flatten(), bins=20, color="red", label='Weights')
+            plt.hist(self.layers[idx].b.flatten(), bins=20, color="orange", label='Biases')
+            plt.legend()
+            plt.title(f"Weight and Bias Distribution for Layer {idx+1}")
+            plt.xlabel("Weight value")
+            plt.ylabel("Frequency")
+            plt.show()
+
+    def plot_gradient_distribution(self, layers_to_plot):
+        for idx in layers_to_plot:
+            if idx < 0 or idx >= len(self.layers):
+                print(f"Layer index {idx} is out of range.")
+                continue
+            if self.layers[idx].dW is None:
+                print(f"No gradient available for Layer {idx+1}. Run a backward pass first.")
+                continue
+            plt.figure()
+            plt.hist(self.layers[idx].dW.flatten(), bins=20,color="red", label='dW')
+            plt.hist(self.layers[idx].db.flatten(), bins=20,color="orange", label='db')
+            plt.legend()
+            plt.title(f"Gradient Distribution (dW) for Layer {idx+1}")
+            plt.xlabel("Gradient value")
+            plt.ylabel("Frequency")
+            plt.show()
