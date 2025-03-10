@@ -1,4 +1,4 @@
-from Layer import Layer
+from classes.Layer import Layer
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle 
@@ -80,13 +80,13 @@ class NeuralNetwork:
                 y_batch = y_shuffled[start:end]
                 self.backward(X_batch, y_batch, learning_rate)
 
+            y_pred = self.forward(X_train)
+            y_pred_val = self.forward(X_val)
+            train_loss = self.loss(y_train, y_pred)
+            val_loss = self.loss(y_val, y_pred_val)
+            history["train_loss"].append(train_loss)
+            history["val_loss"].append(val_loss)
             if verbose:
-                y_pred = self.forward(X_train)
-                y_pred_val = self.forward(X_val)
-                train_loss = self.loss(y_train, y_pred)
-                val_loss = self.loss(y_val, y_pred_val)
-                history["train_loss"].append(train_loss)
-                history["val_loss"].append(val_loss)
                 print(f"Epoch {epoch+1}/{max_epoch}, Train Loss: {train_loss}, Val Loss: {val_loss}")
         return history
     

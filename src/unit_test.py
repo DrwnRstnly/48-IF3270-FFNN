@@ -1,7 +1,7 @@
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
-from NeuralNetwork import NeuralNetwork
+from classes.NeuralNetwork import NeuralNetwork
 
 import numpy as np
 
