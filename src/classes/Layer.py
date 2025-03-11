@@ -38,9 +38,33 @@ def d_softmax(softmax_output, upstream_grad):
         grad[i] = np.dot(jacobian, upstream_grad[i])
     return grad
 
+def leaky_relu(z, alpha=0.01):
+    return np.where(z > 0, z, alpha * z)
+
+def d_leaky_relu(z, a, alpha=0.01):
+    return np.where(z > 0, 1, alpha)
+
+def elu(z, alpha=1.0):
+    return np.where(z > 0, z, alpha * (np.exp(z) - 1))
+
+def d_elu(z, a, alpha=1.0):
+    return np.where(z > 0, 1, a + alpha)
+
+def swish(z):
+    s = sigmoid(z)
+    return z * s
+
+def d_swish(z, a):
+    s = sigmoid(z)
+    return s + z * s * (1 - s)
+
+
 activation_functions = {
     'linear': (linear, d_linear),
     'relu': (relu, d_relu),
+    'leaky_relu': (leaky_relu, d_leaky_relu),
+    'elu': (elu, d_elu),
+    'swish': (swish, d_swish),
     'sigmoid': (sigmoid, d_sigmoid),
     'tanh': (tanh, d_tanh),
     'softmax': (softmax, None)  
@@ -66,6 +90,21 @@ def initialize_weight(shape, method, params):
             np.random.seed(seed)
         std = np.sqrt(variance)
         return np.random.normal(mean, std, size=shape)
+    elif method == 'xavier':
+        seed = params.get('seed', None)
+        if seed is not None:
+            np.random.seed(seed)
+        fan_in = shape[0]
+        fan_out = shape[1] if len(shape) > 1 else shape[0]
+        limit = np.sqrt(6 / (fan_in + fan_out))
+        return np.random.uniform(-limit, limit, size=shape)
+    elif method == 'he':
+        seed = params.get('seed', None)
+        if seed is not None:
+            np.random.seed(seed)
+        fan_in = shape[0]
+        std = np.sqrt(2 / fan_in)
+        return np.random.normal(0, std, size=shape)
     else:
         raise ValueError("Unknown weight initialization method.")
 
