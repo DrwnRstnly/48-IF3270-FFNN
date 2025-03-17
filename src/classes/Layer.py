@@ -130,7 +130,7 @@ class Layer:
         self.a = self.activation(self.z)
         return self.a
 
-    def backward(self, delta, learning_rate):
+    def backward(self, delta, learning_rate, reg_type=None, reg_lambda=0.0):
         if self.activation_name == 'softmax' and self.activation_deriv is None:
             delta = d_softmax(self.a, delta)
         else:
@@ -138,6 +138,11 @@ class Layer:
         
         self.dW = np.dot(self.X.T, delta)
         self.db = np.sum(delta, axis=0, keepdims=True)
+
+        if reg_type == 'L2':
+            self.dW += 2 * reg_lambda * self.W
+        elif reg_type == 'L1':
+            self.dW += reg_lambda * np.sign(self.W)
 
         delta_prev = np.dot(delta, self.W.T)
 

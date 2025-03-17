@@ -33,7 +33,7 @@ def categorical_crossentropy_loss_deriv(y_true, y_pred):
 
 class NeuralNetwork:
     def __init__(self, input_size, layers_config, loss_function='mse', 
-                 weight_init='random_uniform', weight_init_params={}):
+                 weight_init='random_uniform', weight_init_params={}, regularization=None, reg_lambda=0.0):
         self.layers = []
         prev_size = input_size
         for neurons, activation in layers_config:
@@ -53,6 +53,9 @@ class NeuralNetwork:
             self.loss_deriv = categorical_crossentropy_loss_deriv
         else:
             raise ValueError("Unknown loss function.")
+        
+        self.regularization = regularization # 'L1' atau 'L2' atau None
+        self.reg_lambda = reg_lambda
 
     def forward(self, X):
         a = X
@@ -64,7 +67,7 @@ class NeuralNetwork:
         output = self.forward(X)
         delta = self.loss_deriv(y, output)
         for layer in reversed(self.layers):
-            delta = layer.backward(delta, learning_rate)
+            delta = layer.backward(delta, learning_rate, reg_type=self.regularization, reg_lambda=self.reg_lambda)
 
     def train(self, X_train, y_train, X_val, y_val, batch_size=32, learning_rate=0.01, max_epoch=100, verbose=1):
         n_samples = X_train.shape[0]
@@ -149,3 +152,21 @@ class NeuralNetwork:
             plt.xlabel("Gradient value")
             plt.ylabel("Frequency")
             plt.show()
+
+    def plot_training_loss(self, history):
+        epochs = range(1, len(history["train_loss"]) + 1)
+
+        plt.figure(figsize=(10, 6))
+
+        plt.plot(epochs, history["train_loss"], label="Training Loss", marker="o")
+        
+        plt.plot(epochs, history["val_loss"], label="Validation Loss", marker="x")
+        
+        plt.title("Grafik Training dan Validation Loss")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        
+        plt.legend()
+        plt.grid(True)
+
+        plt.show()
