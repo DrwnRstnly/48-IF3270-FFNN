@@ -33,11 +33,12 @@ def categorical_crossentropy_loss_deriv(y_true, y_pred):
 
 class NeuralNetwork:
     def __init__(self, input_size, layers_config, loss_function='mse', 
-                 weight_init='random_uniform', weight_init_params={}, regularization=None, reg_lambda=0.0):
+                 weight_init='random_uniform', weight_init_params={}, regularization=None, reg_lambda=0.0,
+                 use_rmsnorm=False, rmsnorm_epsilon=1e-8):
         self.layers = []
         prev_size = input_size
         for neurons, activation in layers_config:
-            layer = Layer(prev_size, neurons, activation, weight_init, weight_init_params)
+            layer = Layer(prev_size, neurons, activation, weight_init, weight_init_params, use_rmsnorm=use_rmsnorm, rmsnorm_epsilon=rmsnorm_epsilon)
             self.layers.append(layer)
             prev_size = neurons
         
@@ -56,6 +57,9 @@ class NeuralNetwork:
         
         self.regularization = regularization # 'L1' atau 'L2' atau None
         self.reg_lambda = reg_lambda
+
+        self.use_rmsnorm = use_rmsnorm
+        self.epsilon = rmsnorm_epsilon
 
     def forward(self, X):
         a = X
@@ -161,7 +165,7 @@ class NeuralNetwork:
         plt.plot(epochs, history["train_loss"], label="Training Loss", marker="o")
         
         plt.plot(epochs, history["val_loss"], label="Validation Loss", marker="x")
-        
+
         plt.title("Grafik Training dan Validation Loss")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")

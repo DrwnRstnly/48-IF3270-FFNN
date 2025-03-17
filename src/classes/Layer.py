@@ -112,7 +112,8 @@ def initialize_weight(shape, method, params):
 
 class Layer:
     def __init__(self, input_size, output_size, activation, 
-                 weight_init='random_uniform', weight_init_params={}):
+                 weight_init='random_uniform', weight_init_params={}, 
+                 use_rmsnorm=False, rmsnorm_epsilon=1e-8):
         self.input_size = input_size
         self.output_size = output_size
         self.activation_name = activation.lower()
@@ -121,12 +122,24 @@ class Layer:
         self.activation, self.activation_deriv = activation_functions[self.activation_name]
         self.W = initialize_weight((input_size, output_size), weight_init, weight_init_params)
         self.b = initialize_weight((1, output_size), weight_init, weight_init_params)
+
+        self.use_rmsnorm = use_rmsnorm
+        self.epsilon = rmsnorm_epsilon
+        if self.use_rmsnorm:
+            self.g = np.ones((1, output_size))
+            self.dg = None
+            
         self.dW = None
         self.db = None
 
     def forward(self, X):
         self.X = X 
-        self.z = np.dot(X, self.W) + self.b
+        self.z_raw = np.dot(X, self.W) + self.b
+        if self.use_rmsnorm:
+            self.rms = np.sqrt(np.mean(self.z_raw**2, axis=1, keepdims=True) + self.epsilon)
+            self.z = self.g * self.z_raw / self.rms
+        else:
+            self.z = self.z_raw
         self.a = self.activation(self.z)
         return self.a
 
@@ -136,16 +149,36 @@ class Layer:
         else:
             delta = delta * self.activation_deriv(self.z, self.a)
         
-        self.dW = np.dot(self.X.T, delta)
-        self.db = np.sum(delta, axis=0, keepdims=True)
+        if self.use_rmsnorm:
+            # delta is dL/d(z_norm) where z_norm = self.g * z_raw / rms.
+            m = self.output_size  # number of features
+            # term1: derivative from z_norm = g * z_raw / rms
+            term1 = (self.g / self.rms) * delta
+            # term2: correction term from the dependency of rms on z_raw.
+            sum_term = np.sum(self.g * self.z_raw * delta, axis=1, keepdims=True)
+            term2 = (self.z_raw / (m * self.rms**3)) * sum_term
+            # Gradient w.r.t. z_raw
+            grad_z_raw = term1 - term2
+            # Gradient w.r.t. the scaling parameter g
+            self.dg = np.sum(delta * (self.z_raw / self.rms), axis=0, keepdims=True)
+            effective_delta = grad_z_raw
+        else:
+            effective_delta = delta
+        
+        self.dW = np.dot(self.X.T, effective_delta)
+        self.db = np.sum(effective_delta, axis=0, keepdims=True)
 
         if reg_type == 'L2':
             self.dW += 2 * reg_lambda * self.W
         elif reg_type == 'L1':
             self.dW += reg_lambda * np.sign(self.W)
 
-        delta_prev = np.dot(delta, self.W.T)
+        delta_prev = np.dot(effective_delta, self.W.T)
 
         self.W -= learning_rate * self.dW
         self.b -= learning_rate * self.db
+
+        if self.use_rmsnorm:
+            self.g -= learning_rate * self.dg
+
         return delta_prev
