@@ -1,6 +1,7 @@
 from classes.Layer import Layer
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import pickle 
 
 # Loss Functions & Derivatives
@@ -126,6 +127,159 @@ class NeuralNetwork:
             else:
                 print("  Gradients not computed yet.")
 
+    def visualize_network(self, figsize=(20, 12), max_neurons_to_show=None, weight_alpha=0.05, neuron_size=100, 
+                        gradient_cmap='coolwarm', weight_cmap='viridis', edge_threshold=None, 
+                        sample_weights=True, sample_ratio=0.1):
+        
+        # Create a default max_neurons if not provided
+        if max_neurons_to_show is None:
+            max_neurons_to_show = {}
+            for i, layer in enumerate([self.layers[0].input_size] + [layer.output_size for layer in self.layers]):
+                if layer > 100:
+                    max_neurons_to_show[i] = 20
+                elif layer > 50:
+                    max_neurons_to_show[i] = 15
+                else:
+                    max_neurons_to_show[i] = layer
+        
+        layer_sizes = [self.layers[0].input_size] + [layer.output_size for layer in self.layers]
+        n_layers = len(layer_sizes)
+        
+        fig, ax = plt.subplots(figsize=figsize)
+    
+        x_spacing = 1.0 / (n_layers - 1)
+        
+        neuron_positions = {}
+        
+        # Draw neurons for each layer
+        for layer_idx, size in enumerate(layer_sizes):
+            neurons_to_show = min(size, max_neurons_to_show.get(layer_idx, size))
+            
+            if size > neurons_to_show:
+                if layer_idx == 0:
+                    print(f"Input layer: showing {neurons_to_show} of {size} neurons")
+                else:
+                    print(f"Layer {layer_idx}: showing {neurons_to_show} of {size} neurons")
+                indices = np.sort(np.random.choice(size, neurons_to_show, replace=False))
+            else:
+                indices = np.arange(size)
+            
+            y_spacing = 1.0 / (neurons_to_show + 1)
+            for i, idx in enumerate(indices):
+                y = (i + 1) * y_spacing
+                circle = plt.Circle((layer_idx * x_spacing, y), 0.02, 
+                                fill=True, color='lightblue', edgecolor='blue', zorder=4)
+                ax.add_patch(circle)
+                
+                if size <= 50 or i % 5 == 0:  
+                    ax.text(layer_idx * x_spacing, y, f"{idx}", ha='center', va='center', 
+                        fontsize=8, zorder=5)
+                
+                neuron_positions[(layer_idx, idx)] = (layer_idx * x_spacing, y)
+        
+        # Draw connections (weights) between layers
+        for layer_idx, layer in enumerate(self.layers):
+            source_layer_idx = layer_idx
+            target_layer_idx = layer_idx + 1
+            
+            weights = layer.W
+            
+            if hasattr(layer, 'dW') and layer.dW is not None:
+                weight_gradients = layer.dW
+            else:
+                weight_gradients = np.zeros_like(weights)
+            
+            # Normalize weights and gradients for color mapping
+            max_weight = np.max(np.abs(weights)) if weights.size > 0 else 1
+            max_gradient = np.max(np.abs(weight_gradients)) if weight_gradients.size > 0 else 1
+            
+            weight_norm = plt.Normalize(-max_weight, max_weight)
+            gradient_norm = plt.Normalize(-max_gradient, max_gradient)
+            
+            source_indices = list(neuron_positions.keys())
+            source_indices = [idx for idx in source_indices if idx[0] == source_layer_idx]
+            
+            target_indices = list(neuron_positions.keys())
+            target_indices = [idx for idx in target_indices if idx[0] == target_layer_idx]
+            
+            # Calculate how many connections to sample
+            total_connections = len(source_indices) * len(target_indices)
+            if sample_weights and total_connections > 1000:
+                sample_size = int(total_connections * sample_ratio)
+                connections_to_show = min(total_connections, sample_size)
+                print(f"Layer {layer_idx+1}: showing {connections_to_show} of {total_connections} connections")
+                
+                source_targets = []
+                for _ in range(connections_to_show):
+                    source_idx = source_indices[np.random.randint(0, len(source_indices))]
+                    target_idx = target_indices[np.random.randint(0, len(target_indices))]
+                    source_targets.append((source_idx, target_idx))
+            else:
+                source_targets = [(s, t) for s in source_indices for t in target_indices]
+            
+            # Draw connections
+            for (source_layer, source_neuron), (target_layer, target_neuron) in source_targets:
+                weight = weights[source_neuron, target_neuron]
+                
+                if edge_threshold is not None and abs(weight) < edge_threshold:
+                    continue
+                    
+                gradient = weight_gradients[source_neuron, target_neuron]
+                
+                start = neuron_positions[(source_layer, source_neuron)]
+                end = neuron_positions[(target_layer, target_neuron)]
+                
+                line_width = min(5, 0.5 + abs(weight) / max_weight * 3)
+                
+                weight_color = cm.get_cmap(weight_cmap)(weight_norm(weight))
+                gradient_color = cm.get_cmap(gradient_cmap)(gradient_norm(gradient))
+                
+                ax.plot([start[0], end[0]], [start[1], end[1]], 
+                    color=weight_color, linewidth=line_width, alpha=weight_alpha, zorder=1)
+                
+                if np.abs(gradient) > max_gradient * 0.1: 
+                    mid_x = (start[0] + end[0]) / 2
+                    mid_y = (start[1] + end[1]) / 2
+                    gradient_size = min(20, 5 + (abs(gradient) / max_gradient) * 15)
+                    ax.scatter(mid_x, mid_y, s=gradient_size, color=gradient_color, 
+                            edgecolor='black', linewidth=0.5, alpha=0.7, zorder=3)
+        
+    
+        legend_x = 0
+        legend_y = 1
+        legend_spacing = 0.06
+        
+        
+        # Weight legend 
+        weight_cax = fig.add_axes([legend_x, legend_y + legend_spacing, 0.2, 0.02])
+        weight_cb = fig.colorbar(cm.ScalarMappable(norm=weight_norm, cmap=weight_cmap), 
+                            cax=weight_cax, orientation='horizontal')
+        weight_cb.set_label('Weights', fontsize=8)
+        weight_cb.ax.tick_params(labelsize=6)
+        
+        # Gradient legend
+        grad_cax = fig.add_axes([legend_x, legend_y + 2*legend_spacing, 0.2, 0.02])
+        grad_cb = fig.colorbar(cm.ScalarMappable(norm=gradient_norm, cmap=gradient_cmap), 
+                            cax=grad_cax, orientation='horizontal')
+        grad_cb.set_label('Gradients', fontsize=8)
+        grad_cb.ax.tick_params(labelsize=6)
+        
+        for i, size in enumerate(layer_sizes):
+            if i == 0:
+                layer_name = f"Input Layer\n{size} neurons"
+            elif i == len(layer_sizes) - 1:
+                layer_name = f"Output Layer\n{size} neurons"
+            else:
+                layer_name = f"Hidden Layer {i}\n{size} neurons"
+            ax.text(i * x_spacing, 1.05, layer_name, ha='center', va='center', fontsize=12)
+
+        ax.set_xlim(-0.05, 1.05)
+        ax.set_ylim(-0.05, 1.1)
+        ax.axis('off')
+        
+        plt.tight_layout()
+        return fig, ax
+    
     def plot_weight_distribution(self, layers_to_plot):
         for idx in layers_to_plot:
             if idx < 0 or idx >= len(self.layers):
