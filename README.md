@@ -17,9 +17,10 @@ Repository ini berisi kode yang digunakan untuk melakukan simulasi FFNN. Di dala
 ```
 git clone https://github.com/DrwnRstnly/48-IF3270-FFNN.git
 cd 48-IF3270-FFNN
+cd src
 ```
 3. Lalu, gunakan code editor kesukaanmu yang dapat support notebook (.ipynb). Contohnya, `vscode`.
-4. Navigasi workspace pada file `main.ipynb` dan jalankan menggunakan fitur `Run All` yang tersedia atau melakukan command `Ctrl` + `Enter` pada setiap bloknya.
+4. Navigasi workspace pada file `test.ipynb` dan jalankan menggunakan fitur `Run All` yang tersedia atau melakukan command `Ctrl` + `Enter` pada setiap bloknya.
 5. Seharusnya, program notebook sudah berjalan. **Ingat untuk menjalankan notebook mulai dari blok yang teratas, untuk mencegah error pada blok dibawahnya.**
 
 **Note: Ingat untuk melakukan pip install terhadap library yang tidak tersedia pada environment Anda, dengan menggunakan command `pip install <nama_modul>`**
